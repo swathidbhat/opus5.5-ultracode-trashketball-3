@@ -1,0 +1,2426 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500;1,600&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&family=Jost:wght@400;500;600&display=swap');
+
+/* =========================================================================
+   Trashketball overlay. Two themes, switched by data-tk-theme on the root:
+   office = Lumon corporate-retro (navy + pale teal terminal glow)
+   beach  = sunlit luxury (cream frosted glass, coral + ocean, serif display)
+   ========================================================================= */
+
+html, body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: #05101b;
+  overscroll-behavior: none;
+}
+
+#game {
+  display: block;
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+#ui-root {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  pointer-events: none;
+}
+
+/* A boot error must show above the loading veil. */
+#fatal {
+  z-index: 100;
+}
+
+/* ---------------------------------------------------------------- tokens */
+
+.tk-root,
+.tk-root[data-tk-theme='office'] {
+  --tk-font-display: 'IBM Plex Sans', 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
+  --tk-font-ui: 'IBM Plex Sans', 'Helvetica Neue', Helvetica, Arial, system-ui, sans-serif;
+  --tk-font-num: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  --tk-display-weight: 300;
+  --tk-display-style: normal;
+  --tk-display-case: uppercase;
+  --tk-display-track: 0.22em;
+  --tk-title-weight: 500;
+  --tk-title-track: 0.12em;
+
+  --tk-ink: #e8f7f4;
+  --tk-ink-dim: rgba(198, 232, 228, 0.7);
+  --tk-ink-faint: rgba(198, 232, 228, 0.44);
+  --tk-accent: #9ef1e4;
+  --tk-accent-rgb: 158, 241, 228;
+  --tk-accent-2: #5bd6c6;
+  --tk-on-accent: #03222b;
+  --tk-warn: #ffc56e;
+  --tk-miss: #b1c0cf;
+
+  --tk-panel: linear-gradient(180deg, rgba(9, 30, 50, 0.88), rgba(5, 18, 32, 0.9));
+  --tk-panel-solid: rgba(6, 20, 35, 0.9);
+  --tk-card: linear-gradient(180deg, rgba(10, 34, 55, 0.94), rgba(5, 17, 30, 0.96));
+  --tk-cell: rgba(9, 30, 49, 0.9);
+  --tk-line: rgba(158, 241, 228, 0.2);
+  --tk-line-strong: rgba(158, 241, 228, 0.5);
+  --tk-radius: 4px;
+  --tk-radius-lg: 6px;
+  --tk-btn-radius: 3px;
+  --tk-shadow: 0 10px 28px rgba(0, 8, 18, 0.38), inset 0 1px 0 rgba(180, 255, 244, 0.05);
+  --tk-shadow-lg: 0 30px 80px rgba(0, 6, 14, 0.6), 0 0 0 1px rgba(0, 0, 0, 0.3);
+  --tk-blur: blur(8px) saturate(1.3);
+  --tk-text-shadow: 0 1px 2px rgba(0, 10, 20, 0.75);
+  --tk-glow: 0 0 14px rgba(120, 240, 222, 0.45);
+  --tk-track: rgba(158, 241, 228, 0.13);
+  --tk-bar: linear-gradient(90deg, #2aa99b, #9ef1e4);
+  --tk-meter: linear-gradient(to top, #147b74 0%, #32c7b6 28%, #b6faee 56%, #ffd27c 79%, #ff6f61 100%);
+  --tk-reticle: rgba(220, 255, 250, 0.92);
+  --tk-veil: radial-gradient(120% 90% at 50% 35%, rgba(12, 40, 62, 0.8), rgba(3, 10, 19, 0.92) 75%);
+  --tk-start-bg: radial-gradient(120% 85% at 50% 0%, rgba(17, 51, 77, 0.95) 0%, rgba(7, 22, 38, 0.96) 55%, rgba(3, 10, 19, 0.98) 100%);
+  --tk-flash-bg: rgba(5, 19, 33, 0.86);
+  --tk-kbd-bg: rgba(158, 241, 228, 0.1);
+  --tk-kbd-line: rgba(158, 241, 228, 0.35);
+}
+
+.tk-root[data-tk-theme='beach'] {
+  --tk-font-display: 'Cormorant Garamond', 'Cormorant', Garamond, 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
+  --tk-font-ui: 'Jost', 'Avenir Next', Avenir, Futura, 'Segoe UI', system-ui, sans-serif;
+  --tk-font-num: 'Jost', 'Avenir Next', Avenir, 'Segoe UI', system-ui, sans-serif;
+  --tk-display-weight: 600;
+  --tk-display-style: italic;
+  --tk-display-case: none;
+  --tk-display-track: 0;
+  --tk-title-weight: 600;
+  --tk-title-track: 0;
+
+  --tk-ink: #2b1d14;
+  --tk-ink-dim: rgba(78, 57, 42, 0.76);
+  --tk-ink-faint: rgba(78, 57, 42, 0.5);
+  --tk-accent: #df5f3d;
+  --tk-accent-rgb: 223, 95, 61;
+  --tk-accent-2: #1b7a8c;
+  --tk-on-accent: #fffaf3;
+  --tk-warn: #c07214;
+  --tk-miss: #62747d;
+
+  --tk-panel: linear-gradient(180deg, rgba(255, 252, 246, 0.8), rgba(253, 244, 231, 0.72));
+  --tk-panel-solid: rgba(255, 249, 240, 0.92);
+  --tk-card: linear-gradient(180deg, rgba(255, 252, 247, 0.93), rgba(252, 242, 228, 0.9));
+  --tk-cell: rgba(255, 251, 245, 0.85);
+  --tk-line: rgba(255, 255, 255, 0.85);
+  --tk-line-strong: rgba(223, 95, 61, 0.45);
+  --tk-radius: 16px;
+  --tk-radius-lg: 28px;
+  --tk-btn-radius: 999px;
+  --tk-shadow: 0 12px 32px rgba(92, 58, 26, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  --tk-shadow-lg: 0 40px 90px rgba(90, 56, 24, 0.3), inset 0 1px 0 #fff;
+  --tk-blur: blur(14px) saturate(1.6);
+  --tk-text-shadow: none;
+  --tk-glow: none;
+  --tk-track: rgba(90, 64, 40, 0.12);
+  --tk-bar: linear-gradient(90deg, #1b7a8c, #45b4c1 55%, #f19a6b);
+  --tk-meter: linear-gradient(to top, #1b7a8c 0%, #44b6c2 28%, #ffe1a4 56%, #ffa86c 77%, #df5f3d 100%);
+  --tk-reticle: #ffffff;
+  --tk-veil: linear-gradient(180deg, rgba(255, 246, 233, 0.62), rgba(247, 226, 200, 0.78));
+  --tk-start-bg: linear-gradient(180deg, rgba(255, 249, 240, 0.94) 0%, rgba(250, 234, 213, 0.95) 62%, rgba(241, 214, 184, 0.96) 100%);
+  --tk-flash-bg: rgba(255, 250, 243, 0.86);
+  --tk-kbd-bg: rgba(255, 255, 255, 0.7);
+  --tk-kbd-line: rgba(90, 64, 40, 0.22);
+}
+
+/* ------------------------------------------------------------------ base */
+
+/* No position here on purpose: HUD, screens and touch controls stack against #ui-root directly. */
+.tk-ui {
+  font-family: var(--tk-font-ui);
+  color: var(--tk-ink);
+  font-size: 14px;
+  line-height: 1.4;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.tk-ui *,
+.tk-ui *::before,
+.tk-ui *::after {
+  box-sizing: border-box;
+}
+
+/* Zero-specificity reset so component classes below can set their own margins. */
+:where(.tk-ui) :where(h1, h2, p) {
+  margin: 0;
+}
+
+.tk-ui kbd,
+.tk-hint kbd {
+  display: inline-block;
+  min-width: 1.9em;
+  padding: 0.18em 0.5em 0.2em;
+  border: 1px solid var(--tk-kbd-line);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  background: var(--tk-kbd-bg);
+  color: var(--tk-ink);
+  font: 500 0.78em/1.2 var(--tk-font-num);
+  letter-spacing: 0.04em;
+  text-align: center;
+  text-transform: none;
+  white-space: nowrap;
+}
+
+.tk-dim {
+  color: var(--tk-ink-faint);
+}
+
+.tk-eyebrow {
+  font: 500 10.5px/1.3 var(--tk-font-ui);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--tk-ink-dim);
+}
+
+.tk-emblem {
+  display: inline-grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  color: var(--tk-accent);
+  filter: drop-shadow(0 0 6px rgba(var(--tk-accent-rgb), 0.35));
+  flex: none;
+}
+
+.tk-root[data-tk-theme='beach'] .tk-emblem {
+  color: var(--tk-accent);
+  filter: none;
+}
+
+.tk-emblem svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.tk-emblem--sm { width: 30px; height: 30px; }
+.tk-emblem--md { width: 46px; height: 46px; }
+.tk-emblem--lg { width: 64px; height: 64px; }
+
+.tk-panel {
+  position: relative;
+  background: var(--tk-panel);
+  border: 1px solid var(--tk-line);
+  border-radius: var(--tk-radius);
+  box-shadow: var(--tk-shadow);
+  -webkit-backdrop-filter: var(--tk-blur);
+  backdrop-filter: var(--tk-blur);
+}
+
+/* Office panels get a faint lit top edge, like a terminal bezel. */
+.tk-root[data-tk-theme='office'] .tk-panel::before {
+  content: '';
+  position: absolute;
+  left: 12%;
+  right: 12%;
+  top: -1px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(var(--tk-accent-rgb), 0.75), transparent);
+}
+
+/* --------------------------------------------------------------- buttons */
+
+.tk-btn {
+  pointer-events: auto;
+  appearance: none;
+  -webkit-appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6em;
+  min-height: 48px;
+  padding: 0 30px;
+  border: 1px solid var(--tk-line-strong);
+  border-radius: var(--tk-btn-radius);
+  background: transparent;
+  color: var(--tk-ink);
+  font: 600 13px/1 var(--tk-font-ui);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background-color 0.2s, color 0.2s, border-color 0.2s, box-shadow 0.25s, transform 0.15s;
+}
+
+.tk-btn:hover {
+  transform: translateY(-1px);
+  border-color: var(--tk-accent);
+}
+
+.tk-btn:active {
+  transform: translateY(1px) scale(0.99);
+}
+
+.tk-btn:focus-visible {
+  outline: 1px solid rgba(var(--tk-accent-rgb), 0.7);
+  outline-offset: 4px;
+}
+
+.tk-btn--primary {
+  background: var(--tk-accent);
+  border-color: transparent;
+  color: var(--tk-on-accent);
+  box-shadow: 0 10px 26px rgba(var(--tk-accent-rgb), 0.28);
+}
+
+.tk-btn--primary:hover {
+  box-shadow: 0 12px 32px rgba(var(--tk-accent-rgb), 0.42);
+  border-color: transparent;
+}
+
+.tk-root[data-tk-theme='office'] .tk-btn--primary {
+  box-shadow: 0 0 0 1px rgba(var(--tk-accent-rgb), 0.3), 0 0 26px rgba(var(--tk-accent-rgb), 0.3);
+}
+
+.tk-btn--ghost {
+  background: rgba(var(--tk-accent-rgb), 0.06);
+}
+
+.tk-root[data-tk-theme='beach'] .tk-btn--ghost {
+  background: rgba(255, 255, 255, 0.55);
+  border-color: rgba(90, 64, 40, 0.2);
+}
+
+.tk-btn-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+}
+
+/* =================================================================== HUD */
+
+.tk-hud {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  transition: opacity 0.45s ease;
+}
+
+.tk-ui.is-hud-dim .tk-hud { opacity: 0.4; }
+.tk-ui.is-hud-hidden .tk-hud { opacity: 0; }
+
+.tk-top {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding: max(16px, env(safe-area-inset-top)) max(18px, env(safe-area-inset-right)) 0 max(18px, env(safe-area-inset-left));
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: start;
+  gap: 14px;
+}
+
+/* level + progress ------------------------------------------------------ */
+
+.tk-level {
+  justify-self: start;
+  width: min(320px, 100%);
+  padding: 12px 14px 12px;
+}
+
+.tk-level-head {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+
+.tk-level-text {
+  min-width: 0;
+}
+
+.tk-level-name {
+  margin-top: 1px;
+  font: 600 14px/1.25 var(--tk-font-ui);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--tk-ink);
+  text-shadow: var(--tk-text-shadow);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tk-root[data-tk-theme='beach'] .tk-level-name {
+  font: italic 600 21px/1.1 var(--tk-font-display);
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.tk-level-sub {
+  margin-top: 2px;
+  font-size: 11.5px;
+  color: var(--tk-ink-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tk-progress {
+  margin-top: 11px;
+}
+
+.tk-progress-track {
+  position: relative;
+  height: 6px;
+  border-radius: 2px;
+  background: var(--tk-track);
+  overflow: hidden;
+}
+
+.tk-root[data-tk-theme='beach'] .tk-progress-track {
+  border-radius: 99px;
+  height: 7px;
+}
+
+.tk-progress-fill {
+  position: absolute;
+  inset: 0;
+  background: var(--tk-bar);
+  transform-origin: left center;
+  transform: scaleX(0);
+  transition: transform 0.7s cubic-bezier(0.22, 0.9, 0.3, 1);
+  border-radius: inherit;
+}
+
+.tk-root[data-tk-theme='office'] .tk-progress-fill {
+  box-shadow: 0 0 10px rgba(var(--tk-accent-rgb), 0.6);
+}
+
+.tk-progress.is-full .tk-progress-fill,
+.tk-progress.is-endless .tk-progress-fill {
+  background: linear-gradient(90deg, var(--tk-accent-2), var(--tk-accent));
+}
+
+.tk-progress-label {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  font: 500 12px/1 var(--tk-font-num);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+  color: var(--tk-ink);
+}
+
+.tk-progress-label span:last-child {
+  color: var(--tk-ink-dim);
+}
+
+/* score ------------------------------------------------------------------ */
+
+.tk-score {
+  justify-self: center;
+  min-width: 136px;
+  padding: 9px 22px 8px;
+  text-align: center;
+}
+
+.tk-score-value {
+  display: block;
+  font: 500 40px/1.05 var(--tk-font-num);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.06em;
+  color: var(--tk-accent);
+  text-shadow: var(--tk-glow), var(--tk-text-shadow);
+}
+
+.tk-root[data-tk-theme='beach'] .tk-score-value {
+  font: 600 50px/0.95 var(--tk-font-display);
+  font-variant-numeric: lining-nums tabular-nums;
+  letter-spacing: 0;
+  color: var(--tk-ink);
+  padding-top: 2px;
+}
+
+.tk-score-value.is-bump,
+.tk-stat-value.is-bump {
+  animation: tk-bump 0.45s cubic-bezier(0.3, 1.6, 0.5, 1);
+}
+
+@keyframes tk-bump {
+  0% { transform: scale(1); }
+  35% { transform: scale(1.16); }
+  100% { transform: scale(1); }
+}
+
+/* stats ------------------------------------------------------------------ */
+
+.tk-stats {
+  justify-self: end;
+  display: grid;
+  grid-template-columns: repeat(4, auto);
+  padding: 11px 4px;
+}
+
+.tk-stat {
+  display: grid;
+  justify-items: center;
+  gap: 3px;
+  padding: 0 13px;
+}
+
+.tk-stat + .tk-stat {
+  border-left: 1px solid var(--tk-line);
+}
+
+.tk-root[data-tk-theme='beach'] .tk-stat + .tk-stat {
+  border-left-color: rgba(90, 64, 40, 0.12);
+}
+
+.tk-stat-label {
+  font: 500 9.5px/1 var(--tk-font-ui);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--tk-ink-dim);
+}
+
+.tk-stat-value {
+  display: inline-block;
+  font: 500 19px/1.1 var(--tk-font-num);
+  font-variant-numeric: tabular-nums;
+  color: var(--tk-ink);
+  text-shadow: var(--tk-text-shadow);
+}
+
+.tk-stat--streak.is-hot .tk-stat-value {
+  color: var(--tk-accent);
+  text-shadow: var(--tk-glow);
+}
+
+.tk-root[data-tk-theme='beach'] .tk-stat--streak.is-hot .tk-stat-value {
+  font-weight: 600;
+}
+
+/* reticle ---------------------------------------------------------------- */
+
+.tk-reticle {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 34px;
+  height: 34px;
+  margin: -17px 0 0 -17px;
+  filter: drop-shadow(0 0 1px rgba(0, 12, 24, 0.9)) drop-shadow(0 0 3px rgba(0, 12, 24, 0.45));
+}
+
+.tk-reticle-ring,
+.tk-reticle-dot,
+.tk-reticle-power {
+  position: absolute;
+  border-radius: 50%;
+}
+
+.tk-reticle-ring {
+  inset: 8px;
+  border: 2px solid var(--tk-reticle);
+  opacity: 0.95;
+  -webkit-mask: conic-gradient(#000 0 20deg, transparent 20deg 70deg, #000 70deg 110deg, transparent 110deg 160deg, #000 160deg 200deg, transparent 200deg 250deg, #000 250deg 290deg, transparent 290deg 340deg, #000 340deg);
+  mask: conic-gradient(#000 0 20deg, transparent 20deg 70deg, #000 70deg 110deg, transparent 110deg 160deg, #000 160deg 200deg, transparent 200deg 250deg, #000 250deg 290deg, transparent 290deg 340deg, #000 340deg);
+  transition: inset 0.25s ease, opacity 0.25s;
+}
+
+.tk-reticle-dot {
+  left: 50%;
+  top: 50%;
+  width: 5px;
+  height: 5px;
+  margin: -2.5px 0 0 -2.5px;
+  background: var(--tk-accent);
+}
+
+.tk-reticle-power {
+  inset: 0;
+  opacity: 0;
+  background: conic-gradient(var(--tk-accent) calc(var(--p, 0) * 1turn), rgba(255, 255, 255, 0.18) 0);
+  -webkit-mask: radial-gradient(circle, transparent 14px, #000 14.5px, #000 16.5px, transparent 17px);
+  mask: radial-gradient(circle, transparent 14px, #000 14.5px, #000 16.5px, transparent 17px);
+  transition: opacity 0.2s;
+}
+
+.tk-reticle.is-charging .tk-reticle-power { opacity: 1; }
+.tk-reticle.is-charging .tk-reticle-ring { inset: 10.5px; }
+
+/* flash callouts --------------------------------------------------------- */
+
+.tk-flashes {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 59%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 0 16px;
+}
+
+.tk-flash {
+  position: relative;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.45em;
+  padding: 9px 22px 10px;
+  border: 1px solid var(--tk-line-strong);
+  border-radius: var(--tk-radius);
+  background: var(--tk-flash-bg);
+  box-shadow: var(--tk-shadow);
+  -webkit-backdrop-filter: var(--tk-blur);
+  backdrop-filter: var(--tk-blur);
+  white-space: nowrap;
+  animation: tk-flash 1.5s cubic-bezier(0.2, 0.9, 0.25, 1) both;
+}
+
+.tk-root[data-tk-theme='beach'] .tk-flash {
+  border-radius: 999px;
+  border-color: rgba(255, 255, 255, 0.9);
+  padding: 6px 26px 9px;
+}
+
+.tk-flash-word {
+  font: var(--tk-display-style) var(--tk-title-weight) 28px/1.1 var(--tk-font-display);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--tk-ink);
+  text-shadow: var(--tk-text-shadow);
+}
+
+.tk-root[data-tk-theme='beach'] .tk-flash-word {
+  font-size: 34px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.tk-flash-pts {
+  font: 600 24px/1 var(--tk-font-num);
+  font-variant-numeric: tabular-nums;
+  color: var(--tk-accent);
+  text-shadow: var(--tk-glow);
+}
+
+.tk-flash.is-points-only .tk-flash-pts {
+  font-size: 32px;
+}
+
+.tk-flash--swish {
+  padding: 11px 30px 12px;
+  border-color: rgba(var(--tk-accent-rgb), 0.85);
+  box-shadow: var(--tk-shadow), 0 0 0 1px rgba(var(--tk-accent-rgb), 0.25), 0 0 34px rgba(var(--tk-accent-rgb), 0.35);
+  animation-duration: 1.9s;
+}
+
+.tk-flash--swish .tk-flash-word {
+  font-size: 42px;
+  color: var(--tk-accent);
+  text-shadow: var(--tk-glow), var(--tk-text-shadow);
+}
+
+.tk-root[data-tk-theme='beach'] .tk-flash--swish .tk-flash-word {
+  font-size: 48px;
+}
+
+.tk-root[data-tk-theme='beach'] .tk-flash--swish .tk-flash-pts {
+  color: var(--tk-accent-2);
+}
+
+.tk-flash--rim .tk-flash-word { color: var(--tk-warn); }
+.tk-flash--miss .tk-flash-word { color: var(--tk-miss); }
+.tk-flash--miss { border-color: var(--tk-line); }
+.tk-flash--rim { border-color: color-mix(in srgb, var(--tk-warn) 55%, transparent); }
+
+/* Info callouts (spot names, toggles) are a quieter pill so they never compete with a score. */
+.tk-flash--info {
+  padding: 8px 18px 9px;
+  border-color: var(--tk-line);
+}
+
+.tk-flash--info .tk-flash-word {
+  font: 500 13px/1.2 var(--tk-font-ui);
+  letter-spacing: 0.22em;
+}
+
+.tk-root[data-tk-theme='beach'] .tk-flash--info {
+  padding: 5px 22px 7px;
+}
+
+.tk-root[data-tk-theme='beach'] .tk-flash--info .tk-flash-word {
+  font: italic 600 21px/1.2 var(--tk-font-display);
+  letter-spacing: 0;
+}
+
+/* A ring that bursts out behind a swish callout. */
+.tk-flash-burst {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 120px;
+  height: 120px;
+  margin: -60px 0 0 -60px;
+  border-radius: 50%;
+  border: 2px solid rgba(var(--tk-accent-rgb), 0.7);
+  z-index: -1;
+  animation: tk-burst 0.9s cubic-bezier(0.2, 0.8, 0.3, 1) 0.05s both;
+}
+
+@keyframes tk-flash {
+  0% { opacity: 0; transform: translateY(16px) scale(0.82); }
+  12% { opacity: 1; transform: translateY(0) scale(1.07); }
+  22% { transform: scale(1); }
+  78% { opacity: 1; transform: translateY(-4px); }
+  100% { opacity: 0; transform: translateY(-26px) scale(0.98); }
+}
+
+@keyframes tk-burst {
+  0% { opacity: 0.9; transform: scale(0.4); }
+  100% { opacity: 0; transform: scale(3.2, 1.6); }
+}
+
+/* power meter ------------------------------------------------------------ */
+
+.tk-power {
+  position: absolute;
+  right: max(24px, env(safe-area-inset-right));
+  bottom: clamp(92px, 17vh, 150px);
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 10px 9px 10px;
+  background: var(--tk-panel);
+  border: 1px solid var(--tk-line);
+  border-radius: 999px;
+  box-shadow: var(--tk-shadow);
+  -webkit-backdrop-filter: var(--tk-blur);
+  backdrop-filter: var(--tk-blur);
+  opacity: 0;
+  transform: translateX(12px) scale(0.96);
+  transition: opacity 0.18s ease, transform 0.25s cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+
+.tk-power.is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+/* Between throws the meter shows the remembered setting; it lights up while winding up. */
+.tk-power .tk-power-fill {
+  opacity: 0.6;
+  transition: opacity 0.15s ease;
+}
+
+.tk-power.is-active .tk-power-fill {
+  opacity: 1;
+}
+
+.tk-power.is-active {
+  box-shadow: var(--tk-shadow), 0 0 0 1px var(--tk-line), 0 0 22px rgba(255, 255, 255, 0.18);
+}
+
+.tk-power-value {
+  min-width: 42px;
+  text-align: center;
+  font: 600 19px/1 var(--tk-font-num);
+  font-variant-numeric: tabular-nums;
+  color: var(--tk-ink);
+  text-shadow: var(--tk-text-shadow);
+}
+
+.tk-power-value small {
+  font-size: 0.55em;
+  margin-left: 1px;
+  color: var(--tk-ink-dim);
+}
+
+.tk-power-track {
+  position: relative;
+  width: 14px;
+  height: clamp(130px, 28vh, 220px);
+  border-radius: 999px;
+  background: var(--tk-track);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+}
+
+.tk-power-fill {
+  position: absolute;
+  inset: 0;
+  background: var(--tk-meter);
+  clip-path: inset(calc((1 - var(--p, 0)) * 100%) 0 0 0);
+}
+
+.tk-power-ticks {
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(to top, transparent 0 calc(25% - 1px), rgba(255, 255, 255, 0.4) calc(25% - 1px) 25%);
+  mix-blend-mode: overlay;
+}
+
+.tk-power-cap {
+  position: absolute;
+  left: -2px;
+  right: -2px;
+  bottom: calc(var(--p, 0) * 100%);
+  height: 2px;
+  margin-bottom: -1px;
+  background: #fff;
+  box-shadow: 0 0 8px 2px rgba(255, 255, 255, 0.7);
+}
+
+.tk-power-label {
+  font: 500 9px/1 var(--tk-font-ui);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--tk-ink-dim);
+  padding-left: 0.2em;
+}
+
+/* bottom dock: aim chip + hint -------------------------------------------- */
+
+/* The chip sits bottom-left. The hint is centred on screen when there is room and pushed right of the chip
+   when there is not: the two side columns share the free space, but the first never gets narrower than the
+   chip, and the hint's column is sized before them. */
+.tk-dock {
+  position: absolute;
+  left: max(18px, env(safe-area-inset-left));
+  right: max(18px, env(safe-area-inset-right));
+  bottom: max(18px, env(safe-area-inset-bottom));
+  display: grid;
+  grid-template-columns: minmax(max-content, 1fr) auto minmax(0, 1fr);
+  align-items: end;
+  column-gap: 14px;
+}
+
+/* Touch: keep the right-hand column clear of the throw button. */
+.tk-root.tk-touch-mode .tk-dock {
+  grid-template-columns: minmax(max-content, 1fr) auto minmax(100px, 1fr);
+}
+
+/* aim chip ---------------------------------------------------------------- */
+
+.tk-aim {
+  justify-self: start;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 14px;
+  border-radius: var(--tk-radius);
+}
+
+.tk-root[data-tk-theme='beach'] .tk-aim {
+  border-radius: 999px;
+  padding: 8px 18px;
+}
+
+.tk-aim-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.tk-aim-label {
+  font: 500 9.5px/1 var(--tk-font-ui);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--tk-ink-dim);
+}
+
+.tk-aim-value {
+  min-width: 2.6em;
+  font: 500 15px/1 var(--tk-font-num);
+  font-variant-numeric: tabular-nums;
+  color: var(--tk-ink);
+}
+
+.tk-aim.is-full .tk-aim-item:nth-of-type(2) .tk-aim-value {
+  color: var(--tk-accent);
+  text-shadow: var(--tk-glow);
+}
+
+.tk-aim-sep {
+  width: 1px;
+  height: 18px;
+  background: var(--tk-line);
+}
+
+.tk-root[data-tk-theme='beach'] .tk-aim-sep {
+  background: rgba(90, 64, 40, 0.15);
+}
+
+.tk-ui .tk-aim-key {
+  font-size: 10px;
+  padding: 0.1em 0.4em 0.14em;
+  min-width: 1.6em;
+}
+
+/* A tiny launch-angle gauge: quarter-circle with a needle at the pitch angle. */
+.tk-aim-arc {
+  position: relative;
+  width: 18px;
+  height: 18px;
+  border-left: 1.5px solid var(--tk-line-strong);
+  border-bottom: 1.5px solid var(--tk-line-strong);
+}
+
+.tk-aim-arc i {
+  position: absolute;
+  left: -1px;
+  bottom: -1px;
+  width: 18px;
+  height: 2px;
+  margin-bottom: -0.5px;
+  background: var(--tk-accent);
+  border-radius: 2px;
+  transform-origin: 0 50%;
+  transform: rotate(var(--a, -30deg));
+  transition: transform 0.12s linear;
+}
+
+.tk-aim-mute {
+  display: none;
+  width: 18px;
+  height: 18px;
+  color: var(--tk-warn);
+}
+
+.tk-aim.is-muted .tk-aim-mute { display: inline-block; }
+.tk-aim-mute svg { width: 100%; height: 100%; }
+
+/* Touch mode: the chip is the guide toggle (the G key's stand-in), with a small switch showing the state. */
+.tk-aim-switch {
+  display: none;
+  position: relative;
+  width: 25px;
+  height: 15px;
+  border-radius: 99px;
+  border: 1px solid var(--tk-line-strong);
+  background: var(--tk-track);
+  transition: background-color 0.15s, border-color 0.15s;
+}
+
+.tk-aim-switch i {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--tk-ink-dim);
+  transition: transform 0.15s ease, background-color 0.15s;
+}
+
+.tk-aim.is-full .tk-aim-switch {
+  border-color: var(--tk-accent);
+  background: rgba(var(--tk-accent-rgb), 0.28);
+}
+
+.tk-aim.is-full .tk-aim-switch i {
+  transform: translateX(10px);
+  background: var(--tk-accent);
+}
+
+.tk-root.tk-touch-mode .tk-aim-switch {
+  display: inline-block;
+}
+
+/* The touch sound button shows the muted state itself. */
+.tk-root.tk-touch-mode .tk-aim.is-muted .tk-aim-mute {
+  display: none;
+}
+
+.tk-root.tk-touch-mode:not(.tk-modal-open) .tk-aim {
+  pointer-events: auto;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: transform 0.12s ease;
+}
+
+.tk-root.tk-touch-mode .tk-aim:active {
+  transform: scale(0.97);
+}
+
+/* hint line --------------------------------------------------------------- */
+
+.tk-hint {
+  position: relative;
+  justify-self: center;
+  max-width: 640px;
+  padding: 8px 18px;
+  border-radius: 999px;
+  background: var(--tk-flash-bg);
+  border: 1px solid var(--tk-line);
+  box-shadow: var(--tk-shadow);
+  -webkit-backdrop-filter: var(--tk-blur);
+  backdrop-filter: var(--tk-blur);
+  font-size: 13.5px;
+  line-height: 1.5;
+  text-align: center;
+  color: var(--tk-ink);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.tk-hint.is-hidden {
+  opacity: 0;
+  transform: translateY(6px);
+}
+
+.tk-hint kbd {
+  font-size: 0.8em;
+  margin: 0 0.1em;
+}
+
+/* =============================================================== screens */
+
+.tk-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  display: grid;
+  /* minmax(0, 1fr) keeps unbreakable content (nowrap labels, long titles) from widening the screen */
+  grid-template-columns: minmax(0, 1fr);
+  place-items: center;
+  padding: max(24px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.4s ease, visibility 0s linear 0.4s;
+}
+
+.tk-screen.is-open {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transition: opacity 0.4s ease;
+}
+
+/* Closed screens are only faded out (so they can transition), which leaves their looping animations
+   (CTA pulse, wobbling numbers, resume breathing, loading spinner) restyling every frame. Park them. */
+.tk-screen:not(.is-open) *,
+.tk-screen:not(.is-open) *::before,
+.tk-screen:not(.is-open) *::after,
+.tk-loading:not(.is-open) *,
+.tk-loading:not(.is-open) *::before,
+.tk-loading:not(.is-open) *::after {
+  animation-play-state: paused;
+}
+
+.tk-card {
+  position: relative;
+  width: min(500px, 100%);
+  padding: 30px 34px 28px;
+  display: grid;
+  justify-items: center;
+  text-align: center;
+  background: var(--tk-card);
+  border: 1px solid var(--tk-line);
+  border-radius: var(--tk-radius-lg);
+  box-shadow: var(--tk-shadow-lg);
+  -webkit-backdrop-filter: var(--tk-blur);
+  backdrop-filter: var(--tk-blur);
+  transform: translateY(18px) scale(0.98);
+  transition: transform 0.6s cubic-bezier(0.2, 0.85, 0.25, 1);
+}
+
+.tk-screen.is-open .tk-card {
+  transform: none;
+}
+
+/* Office cards: terminal corner brackets. */
+.tk-root[data-tk-theme='office'] .tk-card {
+  --c: rgba(var(--tk-accent-rgb), 0.85);
+  background:
+    linear-gradient(var(--c), var(--c)) left top / 18px 2px no-repeat,
+    linear-gradient(var(--c), var(--c)) left top / 2px 18px no-repeat,
+    linear-gradient(var(--c), var(--c)) right top / 18px 2px no-repeat,
+    linear-gradient(var(--c), var(--c)) right top / 2px 18px no-repeat,
+    linear-gradient(var(--c), var(--c)) left bottom / 18px 2px no-repeat,
+    linear-gradient(var(--c), var(--c)) left bottom / 2px 18px no-repeat,
+    linear-gradient(var(--c), var(--c)) right bottom / 18px 2px no-repeat,
+    linear-gradient(var(--c), var(--c)) right bottom / 2px 18px no-repeat,
+    var(--tk-card);
+}
+
+.tk-card .tk-emblem {
+  margin-bottom: 14px;
+}
+
+.tk-card-title {
+  margin-top: 6px;
+  font: var(--tk-display-style) var(--tk-title-weight) 30px/1.12 var(--tk-font-display);
+  letter-spacing: var(--tk-title-track);
+  text-transform: var(--tk-display-case);
+  color: var(--tk-ink);
+  text-wrap: balance;
+}
+
+.tk-root[data-tk-theme='beach'] .tk-card-title {
+  font-size: 42px;
+  line-height: 1.02;
+}
+
+.tk-card-sub {
+  margin-top: 6px;
+  font-size: 13.5px;
+  color: var(--tk-ink-dim);
+}
+
+.tk-rule {
+  width: 56px;
+  height: 1px;
+  margin: 18px 0 16px;
+  background: linear-gradient(90deg, transparent, var(--tk-line-strong), transparent);
+}
+
+.tk-goal {
+  display: grid;
+  justify-items: center;
+  gap: 7px;
+}
+
+.tk-goal-label {
+  font: 500 10.5px/1 var(--tk-font-ui);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--tk-ink-dim);
+}
+
+.tk-goal-value {
+  max-width: 30ch;
+  font: 500 15px/1.35 var(--tk-font-num);
+  color: var(--tk-accent);
+  text-shadow: var(--tk-glow);
+  text-wrap: balance;
+}
+
+.tk-root[data-tk-theme='beach'] .tk-goal-value {
+  max-width: 32ch;
+  font: 500 16px/1.35 var(--tk-font-ui);
+  color: var(--tk-ink);
+}
+
+.tk-flavor {
+  margin-top: 14px;
+  font-size: 14px;
+  color: var(--tk-ink-dim);
+  text-wrap: balance;
+}
+
+.tk-root[data-tk-theme='office'] .tk-flavor {
+  font-family: var(--tk-font-num);
+  font-size: 12.5px;
+  letter-spacing: 0.02em;
+}
+
+.tk-root[data-tk-theme='beach'] .tk-flavor {
+  font: italic 500 19px/1.35 var(--tk-font-display);
+}
+
+.tk-flavor--lead {
+  margin-top: 10px;
+  color: var(--tk-ink);
+}
+
+.tk-root[data-tk-theme='office'] .tk-flavor--lead {
+  font: 400 15px/1.45 var(--tk-font-ui);
+  letter-spacing: 0.01em;
+}
+
+.tk-root[data-tk-theme='beach'] .tk-flavor--lead {
+  font-size: 22px;
+}
+
+.tk-root[data-tk-theme] .tk-flavor--small {
+  margin-top: 0;
+  margin-bottom: 18px;
+  font-size: 12px;
+  color: var(--tk-ink-faint);
+}
+
+.tk-root[data-tk-theme='beach'] .tk-flavor--small {
+  font-size: 16px;
+}
+
+/* stats grid on result cards */
+.tk-stats-grid {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(var(--cols, 4), minmax(0, 1fr));
+  gap: 1px;
+  margin: 20px 0 14px;
+  border: 1px solid var(--tk-line);
+  border-radius: var(--tk-radius);
+  background: var(--tk-line);
+  overflow: hidden;
+}
+
+.tk-root[data-tk-theme='beach'] .tk-stats-grid {
+  background: rgba(90, 64, 40, 0.1);
+  border-color: rgba(90, 64, 40, 0.1);
+}
+
+.tk-stat-cell {
+  display: grid;
+  gap: 5px;
+  padding: 13px 6px 12px;
+  background: var(--tk-cell);
+}
+
+.tk-stat-cell-value {
+  font: 500 24px/1 var(--tk-font-num);
+  font-variant-numeric: tabular-nums;
+  color: var(--tk-ink);
+}
+
+.tk-root[data-tk-theme='office'] .tk-stat-cell-value {
+  color: var(--tk-accent);
+  text-shadow: var(--tk-glow);
+}
+
+.tk-root[data-tk-theme='beach'] .tk-stat-cell-value {
+  font: 600 32px/0.9 var(--tk-font-display);
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
+.tk-stat-cell-label {
+  font: 500 9.5px/1.2 var(--tk-font-ui);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--tk-ink-dim);
+}
+
+.tk-next {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.tk-next-label {
+  font: 500 10.5px/1 var(--tk-font-ui);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--tk-ink-dim);
+}
+
+.tk-next-name {
+  font: 600 15px/1.2 var(--tk-font-ui);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--tk-ink);
+}
+
+.tk-root[data-tk-theme='beach'] .tk-next-name {
+  font: italic 600 22px/1 var(--tk-font-display);
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+/* start screen ------------------------------------------------------------ */
+
+.tk-start {
+  background: var(--tk-start-bg);
+  cursor: pointer;
+}
+
+.tk-start-bg {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.tk-numbers {
+  position: absolute;
+  inset: -4% -2%;
+  display: grid;
+  align-content: space-between;
+  font: 400 21px/1 var(--tk-font-num);
+  color: rgba(var(--tk-accent-rgb), 0.16);
+  -webkit-mask: radial-gradient(ellipse 52% 56% at 50% 52%, rgba(0, 0, 0, 0.04) 30%, #000 100%);
+  mask: radial-gradient(ellipse 52% 56% at 50% 52%, rgba(0, 0, 0, 0.04) 30%, #000 100%);
+}
+
+.tk-numbers div {
+  display: flex;
+  justify-content: space-between;
+}
+
+.tk-numbers i,
+.tk-numbers b {
+  font-style: normal;
+  font-weight: 400;
+  width: 1ch;
+  text-align: center;
+}
+
+/* the "scary" numbers that wobble */
+.tk-numbers b {
+  color: rgba(var(--tk-accent-rgb), 0.75);
+  text-shadow: 0 0 10px rgba(var(--tk-accent-rgb), 0.8);
+  animation: tk-wobble 2.6s ease-in-out var(--d, 0s) infinite;
+}
+
+@keyframes tk-wobble {
+  0%, 100% { transform: scale(1) translateY(0); }
+  50% { transform: scale(1.45) translateY(-2px); }
+}
+
+.tk-sun {
+  display: none;
+}
+
+.tk-root[data-tk-theme='beach'] .tk-numbers { display: none; }
+
+.tk-root[data-tk-theme='beach'] .tk-sun {
+  display: block;
+  position: absolute;
+  width: 78vmin;
+  height: 78vmin;
+  right: -16vmin;
+  top: -30vmin;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 200, 146, 0.75) 0%, rgba(255, 178, 128, 0.32) 42%, rgba(255, 178, 128, 0) 70%);
+}
+
+.tk-root[data-tk-theme='beach'] .tk-start-bg::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 30%;
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='56'%3E%3Cg fill='none' stroke='%231b7a8c' stroke-opacity='.17' stroke-width='1.3'%3E%3Cpath d='M0 14 Q22.5 6 45 14 T90 14 T135 14 T180 14'/%3E%3Cpath d='M-45 42 Q-22.5 34 0 42 T45 42 T90 42 T135 42 T180 42 T225 42'/%3E%3C/g%3E%3C/svg%3E") 0 0 / 180px 56px,
+    linear-gradient(180deg, rgba(69, 180, 193, 0), rgba(69, 180, 193, 0.2));
+  -webkit-mask: linear-gradient(180deg, transparent, #000 60%);
+  mask: linear-gradient(180deg, transparent, #000 60%);
+}
+
+.tk-start-inner {
+  position: relative;
+  width: min(880px, 100%);
+  display: grid;
+  justify-items: center;
+  text-align: center;
+  transform: translateY(14px);
+  transition: transform 0.7s cubic-bezier(0.2, 0.85, 0.25, 1);
+}
+
+.tk-start.is-open .tk-start-inner {
+  transform: none;
+}
+
+.tk-start-eyebrow {
+  margin-top: 16px;
+}
+
+.tk-title {
+  margin-top: 8px;
+  font: var(--tk-display-style) var(--tk-display-weight) clamp(38px, 7.2vw, 84px)/1 var(--tk-font-display);
+  letter-spacing: var(--tk-display-track);
+  text-transform: var(--tk-display-case);
+  color: var(--tk-ink);
+  /* letter-spacing adds trailing space; pull it back so the word centers */
+  margin-right: calc(-1 * var(--tk-display-track));
+}
+
+.tk-root[data-tk-theme='office'] .tk-title {
+  color: #effffc;
+  text-shadow: 0 0 28px rgba(var(--tk-accent-rgb), 0.38), 0 0 2px rgba(var(--tk-accent-rgb), 0.5);
+}
+
+.tk-root[data-tk-theme='beach'] .tk-title {
+  font-size: clamp(54px, 11vw, 120px);
+  line-height: 0.95;
+  letter-spacing: -0.01em;
+  margin-right: 0;
+}
+
+.tk-tagline {
+  margin-top: 14px;
+  font-size: 16px;
+  color: var(--tk-ink-dim);
+}
+
+.tk-root[data-tk-theme='office'] .tk-tagline {
+  font: 400 14px/1.4 var(--tk-font-num);
+  letter-spacing: 0.04em;
+  color: var(--tk-accent);
+  opacity: 0.85;
+}
+
+.tk-root[data-tk-theme='beach'] .tk-tagline {
+  font: italic 500 23px/1.3 var(--tk-font-display);
+  color: var(--tk-ink-dim);
+  margin-top: 10px;
+}
+
+.tk-level-cards {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 28px;
+}
+
+.tk-level-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  text-align: left;
+  background: var(--tk-panel);
+  border: 1px solid var(--tk-line);
+  border-radius: var(--tk-radius);
+  box-shadow: var(--tk-shadow);
+}
+
+.tk-level-card-num {
+  font: 500 24px/1 var(--tk-font-num);
+  color: var(--tk-accent);
+  text-shadow: var(--tk-glow);
+}
+
+.tk-root[data-tk-theme='beach'] .tk-level-card-num {
+  font: italic 600 34px/1 var(--tk-font-display);
+}
+
+.tk-level-card-text {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  flex: 1;
+}
+
+.tk-level-card-name {
+  font: 600 13px/1.25 var(--tk-font-ui);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--tk-ink);
+}
+
+.tk-root[data-tk-theme='beach'] .tk-level-card-name {
+  font: italic 600 21px/1.1 var(--tk-font-display);
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.tk-level-card-sub {
+  font-size: 12px;
+  color: var(--tk-ink-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tk-level-card-goal {
+  flex: none;
+  padding: 5px 9px;
+  border: 1px solid var(--tk-line);
+  border-radius: var(--tk-btn-radius);
+  font: 500 10.5px/1 var(--tk-font-ui);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--tk-ink-dim);
+}
+
+.tk-level-card-goal b {
+  font: 600 12px/1 var(--tk-font-num);
+  color: var(--tk-ink);
+}
+
+.tk-root[data-tk-theme='beach'] .tk-level-card-goal {
+  border-color: rgba(90, 64, 40, 0.14);
+}
+
+.tk-controls {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, max-content));
+  justify-content: center;
+  gap: 10px 64px;
+  margin-top: 22px;
+  padding: 16px 20px;
+  border-top: 1px solid var(--tk-line);
+  border-bottom: 1px solid var(--tk-line);
+}
+
+.tk-root[data-tk-theme='beach'] .tk-controls {
+  border-color: rgba(90, 64, 40, 0.14);
+}
+
+.tk-control {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-align: left;
+  min-width: 0;
+}
+
+.tk-keys {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  flex: none;
+}
+
+.tk-control-desc {
+  font-size: 13px;
+  line-height: 1.3;
+  color: var(--tk-ink-dim);
+}
+
+.tk-cta {
+  margin-top: 28px;
+  min-width: 240px;
+  min-height: 54px;
+  font-size: 14px;
+  animation: tk-pulse 2.6s ease-in-out infinite;
+}
+
+@keyframes tk-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(var(--tk-accent-rgb), 0.45), 0 10px 28px rgba(var(--tk-accent-rgb), 0.25); }
+  60% { box-shadow: 0 0 0 14px rgba(var(--tk-accent-rgb), 0), 0 10px 28px rgba(var(--tk-accent-rgb), 0.25); }
+}
+
+.tk-footnote {
+  margin-top: 14px;
+  font: 400 12px/1.4 var(--tk-font-num);
+  letter-spacing: 0.04em;
+  color: var(--tk-ink-faint);
+}
+
+.tk-root[data-tk-theme='beach'] .tk-footnote {
+  font-family: var(--tk-font-ui);
+  letter-spacing: 0.08em;
+}
+
+/* intro -------------------------------------------------------------------- */
+
+.tk-intro {
+  background: radial-gradient(ellipse 80% 70% at 50% 50%, rgba(0, 0, 0, 0) 30%, rgba(0, 8, 16, 0.45) 100%);
+  cursor: pointer;
+}
+
+.tk-root[data-tk-theme='beach'] .tk-intro {
+  background: radial-gradient(ellipse 80% 70% at 50% 50%, rgba(255, 244, 228, 0.1) 30%, rgba(120, 80, 40, 0.28) 100%);
+}
+
+.tk-intro-card {
+  width: min(460px, 100%);
+  overflow: hidden;
+}
+
+.tk-intro-timer {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: var(--tk-track);
+}
+
+.tk-intro-timer span {
+  display: block;
+  height: 100%;
+  background: var(--tk-accent);
+  transform-origin: left center;
+}
+
+.tk-intro.is-open .tk-intro-timer span {
+  animation: tk-shrink 2.6s linear both;
+}
+
+@keyframes tk-shrink {
+  from { transform: scaleX(1); }
+  to { transform: scaleX(0); }
+}
+
+/* complete / victory / pause veils ----------------------------------------- */
+
+.tk-complete,
+.tk-victory,
+.tk-pause {
+  background: var(--tk-veil);
+  -webkit-backdrop-filter: blur(6px) saturate(1.1);
+  backdrop-filter: blur(6px) saturate(1.1);
+}
+
+.tk-complete-card {
+  width: min(520px, 100%);
+}
+
+.tk-victory-card {
+  width: min(580px, 100%);
+  padding-top: 34px;
+}
+
+.tk-root[data-tk-theme] .tk-title--victory {
+  font-size: clamp(30px, 5vw, 46px);
+  letter-spacing: calc(var(--tk-display-track) * 0.6);
+  margin-right: 0;
+}
+
+.tk-root[data-tk-theme='beach'] .tk-title--victory {
+  font-size: clamp(44px, 8vw, 66px);
+}
+
+.tk-victory-card .tk-btn-row {
+  margin-top: 8px;
+}
+
+.tk-confetti {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+/* Paper scraps drifting down. */
+.tk-confetti i {
+  position: absolute;
+  top: -6vh;
+  left: var(--x);
+  width: calc(12px * var(--s));
+  height: calc(15px * var(--s));
+  background: #f7f5ee;
+  border-radius: 1px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+  opacity: 0.9;
+  animation: tk-fall var(--dur) linear var(--delay) infinite;
+}
+
+.tk-confetti i:nth-child(3n) { background: var(--tk-accent); }
+.tk-confetti i:nth-child(5n) { background: var(--tk-accent-2); }
+.tk-root[data-tk-theme='beach'] .tk-confetti i:nth-child(4n) { background: #ffd9a8; }
+
+@keyframes tk-fall {
+  0% { transform: translate3d(0, 0, 0) rotate(0deg) rotateX(0deg); }
+  100% { transform: translate3d(var(--drift), 115vh, 0) rotate(var(--r)) rotateX(720deg); }
+}
+
+/* The pause veil lets clicks through to the canvas, which resumes the game. */
+.tk-pause.is-open {
+  pointer-events: none;
+}
+
+.tk-pause-inner {
+  display: grid;
+  justify-items: center;
+  text-align: center;
+  width: min(760px, 100%);
+}
+
+.tk-title--pause {
+  font-size: clamp(40px, 7vw, 68px);
+}
+
+.tk-root[data-tk-theme='beach'] .tk-title--pause {
+  font-size: clamp(56px, 10vw, 92px);
+}
+
+.tk-resume {
+  margin-top: 22px;
+  padding: 10px 20px;
+  border: 1px solid var(--tk-line-strong);
+  border-radius: var(--tk-btn-radius);
+  font: 500 13px/1.4 var(--tk-font-ui);
+  letter-spacing: 0.04em;
+  color: var(--tk-ink);
+  animation: tk-breathe 2.4s ease-in-out infinite;
+}
+
+@keyframes tk-breathe {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.tk-controls--compact {
+  width: auto;
+  max-width: 100%;
+  grid-template-columns: repeat(2, max-content);
+  column-gap: 44px;
+  margin-top: 26px;
+}
+
+/* loading veil ------------------------------------------------------------- */
+
+.tk-loading {
+  position: fixed;
+  inset: 0;
+  z-index: 8;
+  display: grid;
+  place-items: center;
+  background: var(--tk-start-bg);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.6s ease, visibility 0s linear 0.6s;
+}
+
+.tk-root[data-tk-theme='office'] .tk-loading {
+  background: radial-gradient(120% 85% at 50% 30%, #0f2d47 0%, #06131f 60%, #030a12 100%);
+}
+
+.tk-root[data-tk-theme='beach'] .tk-loading {
+  background: linear-gradient(180deg, #fff9f0 0%, #f8e7d0 70%, #f1d6b8 100%);
+}
+
+.tk-loading.is-open {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transition: opacity 0.25s ease;
+}
+
+.tk-loading-inner {
+  display: grid;
+  justify-items: center;
+  gap: 18px;
+}
+
+.tk-emblem--spin {
+  position: relative;
+  width: 58px;
+  height: 58px;
+}
+
+.tk-emblem--spin::after {
+  content: '';
+  position: absolute;
+  inset: -12px;
+  border-radius: 50%;
+  border: 1.5px solid transparent;
+  border-top-color: var(--tk-accent);
+  border-right-color: rgba(var(--tk-accent-rgb), 0.3);
+  animation: tk-spin 1.3s linear infinite;
+}
+
+@keyframes tk-spin {
+  to { transform: rotate(360deg); }
+}
+
+.tk-loading-text {
+  margin-top: 6px;
+  font: 500 12px/1.4 var(--tk-font-num);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--tk-ink-dim);
+}
+
+.tk-root[data-tk-theme='beach'] .tk-loading-text {
+  font: italic 500 22px/1.3 var(--tk-font-display);
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.tk-loading-bar {
+  position: relative;
+  width: 160px;
+  height: 2px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: var(--tk-track);
+}
+
+.tk-loading-bar span {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 40%;
+  background: var(--tk-accent);
+  animation: tk-indeterminate 1.4s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+
+@keyframes tk-indeterminate {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(260%); }
+}
+
+/* ========================================================= touch controls */
+
+.tk-throw-btn,
+.tk-pause-btn,
+.tk-sound-btn {
+  position: fixed;
+  z-index: 2;
+  display: none;
+  place-items: center;
+  padding: 0;
+  pointer-events: auto;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  appearance: none;
+  -webkit-appearance: none;
+  border: 1px solid var(--tk-line-strong);
+  border-radius: 50%;
+  background: var(--tk-panel-solid, rgba(6, 20, 35, 0.9));
+  color: var(--tk-ink, #e8f7f4);
+  box-shadow: var(--tk-shadow);
+  -webkit-backdrop-filter: var(--tk-blur);
+  backdrop-filter: var(--tk-blur);
+  cursor: pointer;
+}
+
+.tk-throw-btn.is-visible,
+.tk-pause-btn.is-visible,
+.tk-sound-btn.is-visible {
+  display: grid;
+}
+
+.tk-throw-btn {
+  right: calc(18px + env(safe-area-inset-right));
+  bottom: calc(22px + env(safe-area-inset-bottom));
+  width: 98px;
+  height: 98px;
+  font-family: var(--tk-font-ui);
+  transition: transform 0.12s ease, background-color 0.2s;
+}
+
+.tk-throw-ring {
+  position: absolute;
+  inset: 5px;
+  border-radius: 50%;
+  background: conic-gradient(var(--tk-accent, #9ef1e4) calc(var(--p, 0) * 1turn), var(--tk-track, rgba(158, 241, 228, 0.13)) 0);
+  -webkit-mask: radial-gradient(circle, transparent 61%, #000 62.5%);
+  mask: radial-gradient(circle, transparent 61%, #000 62.5%);
+}
+
+.tk-throw-core {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  line-height: 1;
+}
+
+.tk-throw-label {
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  padding-left: 0.16em;
+}
+
+.tk-throw-sub {
+  max-width: 62px;
+  font-size: 8.5px;
+  line-height: 1.2;
+  letter-spacing: 0.12em;
+  text-align: center;
+  text-transform: uppercase;
+  color: var(--tk-ink-dim);
+}
+
+.tk-throw-btn.is-pressed {
+  transform: scale(0.94);
+  box-shadow: var(--tk-shadow), 0 0 28px rgba(var(--tk-accent-rgb, 158, 241, 228), 0.45);
+}
+
+/* Finger slid far enough sideways that letting go cancels: dim the power ring and say so. */
+.tk-throw-btn.is-cancel {
+  transform: scale(0.9);
+  border-style: dashed;
+  border-color: var(--tk-miss);
+}
+
+.tk-throw-btn.is-cancel .tk-throw-ring {
+  opacity: 0.3;
+}
+
+.tk-throw-btn.is-cancel .tk-throw-label {
+  color: var(--tk-warn);
+}
+
+.tk-pause-btn {
+  top: calc(14px + env(safe-area-inset-top));
+  right: calc(14px + env(safe-area-inset-right));
+  width: 44px;
+  height: 44px;
+}
+
+.tk-pause-btn svg {
+  width: 20px;
+  height: 20px;
+  fill: currentColor;
+}
+
+/* Stacked under the pause button: there is no spare room beside it in the top row on phones. */
+.tk-sound-btn {
+  top: calc(66px + env(safe-area-inset-top));
+  right: calc(14px + env(safe-area-inset-right));
+  width: 44px;
+  height: 44px;
+}
+
+.tk-sound-btn svg {
+  width: 22px;
+  height: 22px;
+}
+
+.tk-sound-btn .tk-sound-off,
+.tk-root.tk-muted .tk-sound-btn .tk-sound-on {
+  display: none;
+}
+
+.tk-root.tk-muted .tk-sound-btn .tk-sound-off {
+  display: inline;
+}
+
+.tk-root.tk-muted .tk-sound-btn {
+  color: var(--tk-warn);
+}
+
+.tk-root.tk-touch-mode .tk-top {
+  padding-right: calc(68px + env(safe-area-inset-right));
+}
+
+.tk-root.tk-touch-mode .tk-aim-key {
+  display: none;
+}
+
+.tk-root.tk-touch-mode .tk-power {
+  bottom: calc(140px + env(safe-area-inset-bottom));
+}
+
+/* Touch: drag the meter to set power without throwing (input.js). */
+.tk-root.tk-touch-mode:not(.tk-modal-open) .tk-power.is-visible {
+  pointer-events: auto;
+  touch-action: none;
+  cursor: ns-resize;
+}
+
+.tk-root.tk-touch-mode .tk-power::after {
+  content: '';
+  position: absolute;
+  inset: -8px -12px; /* a finger-sized grab area around the slim pill */
+}
+
+.tk-power.is-grabbed {
+  box-shadow: var(--tk-shadow), 0 0 0 1px var(--tk-line-strong), 0 0 22px rgba(var(--tk-accent-rgb), 0.35);
+}
+
+.tk-power.is-grabbed .tk-power-fill {
+  opacity: 1;
+}
+
+/* Short landscape screens: beside the throw button rather than above it, clear of the pause and sound buttons. */
+@media (max-height: 500px) {
+  .tk-root.tk-touch-mode .tk-power {
+    right: calc(130px + env(safe-area-inset-right));
+    bottom: calc(22px + env(safe-area-inset-bottom));
+  }
+}
+
+/* Portrait screens: the held ball sits in the lower right, so the meter moves to the left edge
+   (touch phones and narrow desktop windows alike). */
+@media (max-aspect-ratio: 1/1) {
+  .tk-root .tk-power,
+  .tk-root.tk-touch-mode .tk-power {
+    right: auto;
+    left: max(10px, env(safe-area-inset-left));
+    bottom: calc(max(12px, env(safe-area-inset-bottom)) + 150px);
+    transform: translateX(-12px) scale(0.96);
+  }
+
+  .tk-root .tk-power.is-visible,
+  .tk-root.tk-touch-mode .tk-power.is-visible {
+    transform: none;
+  }
+}
+
+/* Lock-mode prompt while the mouse is not captured. Low and centred, above the hint row: the bin, the
+   aiming arc and the held ball all sit higher or further right. */
+.tk-lock-prompt {
+  position: fixed;
+  z-index: 2;
+  left: 50%;
+  bottom: calc(max(18px, env(safe-area-inset-bottom)) + clamp(96px, 16vh, 140px));
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 15px 7px 11px;
+  border: 1px solid var(--tk-line-strong);
+  border-radius: 999px;
+  background: var(--tk-flash-bg);
+  box-shadow: var(--tk-shadow);
+  -webkit-backdrop-filter: var(--tk-blur);
+  backdrop-filter: var(--tk-blur);
+  color: var(--tk-ink);
+  font: 500 12px/1 var(--tk-font-ui);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transform: translate(-50%, 6px);
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.tk-lock-prompt svg {
+  width: 17px;
+  height: 17px;
+  color: var(--tk-accent);
+}
+
+.tk-lock-prompt.is-visible {
+  opacity: 1;
+  transform: translate(-50%, 0);
+  transition-delay: 0.15s;
+}
+
+.tk-root.tk-modal-open .tk-throw-btn,
+.tk-root.tk-modal-open .tk-pause-btn,
+.tk-root.tk-modal-open .tk-sound-btn,
+.tk-root.tk-modal-open .tk-lock-prompt {
+  display: none;
+}
+
+/* ============================================================= responsive */
+
+@media (max-width: 900px) {
+  .tk-controls {
+    grid-template-columns: repeat(2, minmax(0, max-content));
+    column-gap: 36px;
+  }
+}
+
+@media (max-width: 720px) {
+  .tk-top {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+    padding: max(10px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right)) 0 max(10px, env(safe-area-inset-left));
+  }
+
+  .tk-level {
+    width: auto;
+    justify-self: stretch;
+    padding: 9px 11px 10px;
+  }
+
+  .tk-level-head .tk-emblem {
+    width: 24px;
+    height: 24px;
+  }
+
+  .tk-level-sub {
+    display: none;
+  }
+
+  .tk-level-name {
+    font-size: 12.5px;
+    letter-spacing: 0.05em;
+    white-space: normal;
+  }
+
+  .tk-root[data-tk-theme='beach'] .tk-level-name {
+    font-size: 18px;
+  }
+
+  .tk-progress {
+    margin-top: 8px;
+  }
+
+  .tk-score {
+    min-width: 96px;
+    padding: 7px 14px 6px;
+    align-self: stretch;
+    display: grid;
+    align-content: center;
+  }
+
+  .tk-score-value {
+    font-size: 32px;
+  }
+
+  .tk-root[data-tk-theme='beach'] .tk-score-value {
+    font-size: 40px;
+  }
+
+  .tk-stats {
+    grid-column: 1 / -1;
+    justify-self: stretch;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    padding: 7px 2px;
+  }
+
+  .tk-stat {
+    padding: 0 4px;
+    gap: 2px;
+  }
+
+  .tk-stat-label {
+    font-size: 8.5px;
+    letter-spacing: 0.14em;
+  }
+
+  .tk-stat-value {
+    font-size: 15px;
+  }
+
+  .tk-power {
+    right: max(14px, env(safe-area-inset-right));
+    padding: 8px 7px;
+  }
+
+  .tk-power-track {
+    height: clamp(110px, 22vh, 170px);
+  }
+
+  /* Stack the hint above the chip, left-aligned, clear of the throw button. */
+  .tk-dock {
+    left: max(10px, env(safe-area-inset-left));
+    right: auto;
+    bottom: max(12px, env(safe-area-inset-bottom));
+    display: flex;
+    flex-direction: column-reverse;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .tk-aim {
+    gap: 9px;
+    padding: 7px 11px;
+  }
+
+  .tk-root[data-tk-theme='beach'] .tk-aim {
+    padding: 7px 14px;
+  }
+
+  .tk-aim-value {
+    font-size: 13.5px;
+  }
+
+  .tk-hint {
+    max-width: calc(100vw - 150px);
+    padding: 7px 14px;
+    border-radius: 14px;
+    font-size: 12.5px;
+    text-align: left;
+  }
+
+  .tk-flashes {
+    bottom: 58%;
+  }
+
+  .tk-flash {
+    max-width: 100%;
+    flex-wrap: wrap;
+    justify-content: center;
+    white-space: normal;
+    text-align: center;
+  }
+
+  .tk-flash-word { font-size: 22px; letter-spacing: 0.12em; }
+  .tk-flash-pts { font-size: 20px; }
+  .tk-flash--swish .tk-flash-word { font-size: 30px; }
+  .tk-flash--info .tk-flash-word { font-size: 12px; letter-spacing: 0.16em; }
+  .tk-root[data-tk-theme='beach'] .tk-flash-word { font-size: 28px; }
+  .tk-root[data-tk-theme='beach'] .tk-flash--swish .tk-flash-word { font-size: 36px; }
+  .tk-root[data-tk-theme='beach'] .tk-flash--info .tk-flash-word { font-size: 19px; }
+
+  .tk-card {
+    padding: 26px 20px 22px;
+  }
+
+  .tk-card-title {
+    font-size: 24px;
+  }
+
+  .tk-root[data-tk-theme='beach'] .tk-card-title {
+    font-size: 36px;
+  }
+
+  .tk-stat-cell-value {
+    font-size: 20px;
+  }
+
+  .tk-root[data-tk-theme='beach'] .tk-stat-cell-value {
+    font-size: 27px;
+  }
+
+  .tk-level-cards {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+    margin-top: 22px;
+  }
+
+  .tk-level-card {
+    padding: 11px 13px;
+  }
+
+  .tk-controls {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 9px;
+    padding: 14px 6px;
+    margin-top: 18px;
+  }
+
+  .tk-controls--compact {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .tk-level-card-sub {
+    white-space: normal;
+  }
+
+  .tk-cta {
+    width: 100%;
+    margin-top: 22px;
+  }
+
+  .tk-btn-row .tk-btn {
+    flex: 1 1 160px;
+  }
+
+  /* Fewer, smaller columns so the digits stay a sparse field rather than a solid wall. */
+  .tk-numbers {
+    font-size: 17px;
+  }
+
+  .tk-numbers div > :nth-child(n + 17) {
+    display: none;
+  }
+
+  /* The content spans the full width here, so keep the digits to bands above and below it. */
+  .tk-numbers {
+    -webkit-mask: linear-gradient(180deg, #000 0 11%, rgba(0, 0, 0, 0.05) 21% 83%, #000 93%);
+    mask: linear-gradient(180deg, #000 0 11%, rgba(0, 0, 0, 0.05) 21% 83%, #000 93%);
+  }
+
+  .tk-root[data-tk-theme='office'] .tk-start .tk-title {
+    font-size: clamp(28px, 8.6vw, 44px);
+    letter-spacing: 0.16em;
+    margin-right: -0.16em;
+  }
+}
+
+@media (max-width: 480px) {
+  .tk-level-head .tk-emblem {
+    display: none;
+  }
+
+  /* Keep the touch chip (with its guide switch) clear of the throw button. */
+  .tk-root.tk-touch-mode .tk-aim {
+    gap: 7px;
+  }
+
+  .tk-root.tk-touch-mode .tk-aim-item {
+    gap: 5px;
+  }
+}
+
+/* Landscape phones: the bin sits low in the frame once the arc steepens, so the hint stacks on the chip
+   and stays in the left half of the screen, away from the centre line the bin moves along. */
+@media (max-height: 500px) {
+  .tk-dock,
+  .tk-root.tk-touch-mode .tk-dock {
+    right: auto;
+    display: flex;
+    flex-direction: column-reverse;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .tk-hint {
+    max-width: min(calc(100vw - 150px), calc(50vw - 72px));
+    padding: 6px 14px;
+    border-radius: 14px;
+    font-size: 12.5px;
+    text-align: left;
+  }
+}
+
+@media (max-height: 640px) and (min-width: 721px) {
+  .tk-start-inner .tk-emblem--lg { width: 44px; height: 44px; }
+  .tk-level-cards { margin-top: 18px; }
+  .tk-start .tk-controls { margin-top: 14px; padding: 12px 20px; }
+  .tk-cta { margin-top: 18px; }
+}
+
+/* Short viewports (small windows, phones in landscape): compact the cards so their buttons stay on screen. */
+@media (max-height: 560px) {
+  .tk-screen {
+    padding-top: max(12px, env(safe-area-inset-top));
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+  }
+
+  .tk-card {
+    padding: 16px 24px;
+  }
+
+  .tk-card .tk-emblem,
+  .tk-start-inner .tk-emblem--lg {
+    display: none;
+  }
+
+  .tk-card-title { font-size: 22px; }
+  .tk-root[data-tk-theme='beach'] .tk-card-title { font-size: 32px; }
+  .tk-root[data-tk-theme] .tk-title--victory { font-size: 28px; }
+  .tk-root[data-tk-theme='beach'] .tk-title--victory { font-size: 40px; }
+  .tk-rule { margin: 10px 0 8px; }
+  .tk-flavor { margin-top: 8px; }
+  .tk-flavor--lead { margin-top: 6px; }
+  .tk-root[data-tk-theme] .tk-flavor--small { margin-bottom: 10px; }
+  .tk-next { margin-bottom: 12px; }
+  .tk-victory-card { padding-top: 16px; }
+  .tk-btn { min-height: 42px; }
+
+  /* All stats on one row. */
+  .tk-stats-grid {
+    grid-template-columns: none;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+    margin: 12px 0 10px;
+  }
+
+  .tk-stat-cell { padding: 8px 3px 7px; }
+  .tk-stat-cell-value { font-size: 19px; }
+  .tk-root[data-tk-theme='beach'] .tk-stat-cell-value { font-size: 25px; }
+
+  .tk-start-eyebrow { margin-top: 0; }
+  .tk-numbers {
+    -webkit-mask: radial-gradient(ellipse 62% 72% at 50% 50%, rgba(0, 0, 0, 0.03) 55%, rgba(0, 0, 0, 0.55) 100%);
+    mask: radial-gradient(ellipse 62% 72% at 50% 50%, rgba(0, 0, 0, 0.03) 55%, rgba(0, 0, 0, 0.55) 100%);
+  }
+  .tk-title { font-size: clamp(30px, 6vw, 54px); }
+  .tk-root[data-tk-theme='beach'] .tk-title { font-size: clamp(44px, 8vw, 72px); }
+  .tk-tagline { margin-top: 8px; }
+  .tk-level-cards { margin-top: 14px; }
+  .tk-level-card { padding: 8px 14px; }
+  .tk-start .tk-controls { margin-top: 12px; padding: 10px 16px; gap: 6px 40px; }
+  .tk-cta { margin-top: 14px; min-height: 46px; }
+  .tk-footnote { margin-top: 8px; }
+
+  .tk-title--pause { font-size: 44px; }
+  .tk-root[data-tk-theme='beach'] .tk-title--pause { font-size: 60px; }
+  .tk-resume { margin-top: 14px; }
+  .tk-controls--compact { margin-top: 16px; }
+}
+
+/* ========================================================= reduced motion */
+
+@media (prefers-reduced-motion: reduce) {
+  .tk-flash {
+    animation-name: tk-fade-hold;
+  }
+
+  .tk-flash-burst,
+  .tk-confetti,
+  .tk-numbers b {
+    animation: none;
+  }
+
+  .tk-flash-burst,
+  .tk-confetti {
+    display: none;
+  }
+
+  .tk-cta,
+  .tk-resume {
+    animation: none;
+  }
+
+  .tk-score-value.is-bump,
+  .tk-stat-value.is-bump {
+    animation: none;
+  }
+
+  .tk-card,
+  .tk-start-inner,
+  .tk-power,
+  .tk-hint,
+  .tk-hint.is-hidden,
+  .tk-lock-prompt {
+    transition-property: opacity;
+  }
+
+  .tk-card,
+  .tk-start-inner {
+    transform: none;
+  }
+
+  .tk-emblem--spin::after {
+    animation-duration: 4s;
+  }
+
+  .tk-loading-bar span {
+    animation-duration: 3s;
+  }
+}
+
+@keyframes tk-fade-hold {
+  0% { opacity: 0; }
+  10%, 80% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* The score panel steps aside (fades) while the aiming arc or the ball passes behind it. main.js toggles
+   the class on <html> after projecting the arc into screen space. */
+.tk-score {
+  transition: opacity 0.15s ease;
+}
+
+.tk-score-ghost .tk-score {
+  opacity: 0.22;
+}
+
+/* Short landscape screens (phones on their side): a compact top row, so the camera has room to keep
+   lobs below it, and make flashes that sit under the row instead of over it. */
+@media (max-height: 500px) {
+  .tk-top {
+    padding-top: max(8px, env(safe-area-inset-top));
+    gap: 8px;
+  }
+
+  .tk-level {
+    padding: 6px 10px 7px;
+  }
+
+  .tk-level-sub,
+  .tk-level-head .tk-emblem {
+    display: none;
+  }
+
+  .tk-score {
+    min-width: 92px;
+    padding: 4px 14px 3px;
+  }
+
+  .tk-score-value,
+  .tk-root[data-tk-theme='beach'] .tk-score-value {
+    font-size: 26px;
+  }
+
+  .tk-stats {
+    padding: 6px 2px;
+  }
+
+  .tk-stat {
+    padding: 0 9px;
+  }
+
+  .tk-stat-value {
+    font-size: 15px;
+  }
+
+  .tk-flashes {
+    bottom: auto;
+    top: 72px;
+  }
+}
